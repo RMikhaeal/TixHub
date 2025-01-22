@@ -1,6 +1,5 @@
 import express from 'express';
 import 'express-async-errors';
-import 'dotenv/config';
 import cookieSession from 'cookie-session';
 
 import { currentUserRouter } from './routes/current-user';
