@@ -7,6 +7,8 @@ import {
 } from '@mikhaealtix/common';
 import { body } from 'express-validator';
 import mongoose from 'mongoose';
+import { natsWrapper } from '../nats-wrapper';
+import { OrderCancelledPublisher } from '../events/publishers/order-cancelled-publisher';
 
 const router = express.Router();
 
@@ -23,7 +25,7 @@ router.delete(
       .withMessage('orderId must be provided'),
   ],
   async (req: Request, res: Response) => {
-    const order = await Order.findById(req.params.orderId);
+    const order = await Order.findById(req.params.orderId).populate('ticket');
 
     if (!order) {
       throw new NotFoundError();
@@ -34,6 +36,13 @@ router.delete(
 
     order.status = OrderStatus.Cancelled;
     await order.save();
+    await new OrderCancelledPublisher(natsWrapper.client).publish({
+      id: order.id,
+      version: order.version,
+      ticket: {
+        id: order.ticket.id,
+      },
+    });
 
     res.status(204).send(order);
   }
